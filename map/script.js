@@ -4,13 +4,13 @@ var lat = 46.05076627820738;
 
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(showPosition);
-  } 
+} 
 else {
     console.log("Geolocation is not supported . . .");
 }
 
 
-function showPosition(position) {
+async function showPosition(position) {
     console.log("Latitude: " + position.coords.latitude +
     "\nLongitude: " + position.coords.longitude);
     long = position.coords.longitude;
@@ -28,4 +28,22 @@ function loadMap() {
     // create a marker for FRI
     var markerFri = L.marker([46.05076627820738, 14.469006330685156]).addTo(map);
     markerFri.bindPopup("Fakulteta za računalništvo in informatiko").openPopup();
+
+    var markers = new Array;
+
+    window.setInterval(function() {
+        coordinates = createRandomCoordinate()
+        var marker = L.marker([coordinates[0], coordinates[1]]).addTo(map);
+        if (markers.length >= 1) {
+            markers.shift().remove();
+        }
+        markers.push(marker);
+      }, 5000);
+    
+}
+
+function createRandomCoordinate() {
+    let x = lat + Math.random() * (Math.round(Math.random()) ? 1 : -1) * 0.001;
+    let y = long + Math.random() * (Math.round(Math.random()) ? 1 : -1) * 0.001;
+    return [x, y]
 }
