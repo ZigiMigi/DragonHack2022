@@ -1,3 +1,4 @@
+// default location is FRI if geolocation does not work
 var long = 14.469006330685156;
 var lat = 46.05076627820738;
 
@@ -18,7 +19,7 @@ function showPosition(position) {
 }
 
 function loadMap() {
-    // load map and set it to FRI location
+    // load map and set it to current location
     var map = L.map('map').setView([lat, long], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
