@@ -53,12 +53,17 @@ function loadMap() {
                 alert('Something went wrong: ' + err);
             } 
             else {
-                console.log(data[0].latitude, data[0].longitude);
-                var marker = L.marker([data[0].latitude, data[0].longitude]).addTo(map);
                 if (markers.length >= 1) {
-                    markers.shift().remove();
+                    for (let i = 0; i < data.length; i++) {
+                        markers.shift().remove();
+                    }
                 }
-                markers.push(marker);
+                for (let i = 0; i < data.length; i++){
+                    console.log(data[i].longitude, data[i].latitude, data[i].device_id)
+                    var marker = L.marker([data[i].latitude, data[i].longitude]).addTo(map);
+                    marker.bindPopup(data[i].device_id);
+                    markers.push(marker);
+                }
             }
         });
       }, 5000);
