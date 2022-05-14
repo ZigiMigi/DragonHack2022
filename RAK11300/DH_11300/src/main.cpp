@@ -50,13 +50,13 @@ static lmh_callback_t LoRa_Callbacks = {BoardGetBatteryLevel, BoardGetUniqueId, 
 
 // LoRa Structs
 #define LORAWAN_APP_DATA_BUFF_SIZE 64                     // buffer size of the data to be transmitted. */
-#define LORAWAN_APP_INTERVAL 30000
+#define LORAWAN_APP_INTERVAL 15000
 #define LORAWAN_APP_REJOIN 60000
 static uint8_t m_lora_app_data_buffer[LORAWAN_APP_DATA_BUFF_SIZE];            //< Lora user application data buffer.
 static lmh_app_data_t m_lora_app_data = {m_lora_app_data_buffer, 0, 0, 0, 0}; //< Lora user application data structure.
 
 // ************************************ IDs ************************************
-//#define D7 // Peter
+// #define D7 // Peter
 #include "keys.h"
 // ************************************     ************************************
 
@@ -156,10 +156,10 @@ int intToBuff(uint8_t* buffer, int index, int32_t input){
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (aliveCounter++ % 1000000 == 0)
+  if (aliveCounter % 4 == 0)
   {
     Serial.print("[Loop] ");
-    Serial.print(aliveCounter / 100000);
+    Serial.print(aliveCounter / 4);
     Serial.println(" Alive");
   }
 
@@ -174,6 +174,10 @@ void loop() {
     lmh_join();
     rejoin = false;
   }
+
+  aliveCounter ++;
+  digitalWrite(LED_BUILTIN, aliveCounter % 2);
+  sleep_ms(250);
 }
 
 bool processGPSData(){
