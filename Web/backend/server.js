@@ -8,7 +8,6 @@ const port = 3000;
 let cors = require('cors');
 app.use(cors());
 
-//const hardcoded_trackers = [{ latitude: 46.04975, longitude: 14.46907 }];
 const lat = 46.04975;
 const long = 14.46907;
 
