@@ -19,9 +19,10 @@ using namespace std::chrono;
 TinyGPS gps;
 mbed::Ticker appTimer;
 bool doSend = false;
+bool rejoin = false;
 
 // Forward Callback declerations
-static void LoRa_onJoinedHandler(void);
+static void LoRa_onHandlerJoined(void);
 static void LoRa_onFailedHandlerJoin(void);
 static void LoRa_rxHandler(lmh_app_data_t *app_data);
 static void LoRa_onConfirmClassHandler(DeviceClass_t Class);
@@ -29,6 +30,7 @@ void LoRa_onUncomfirmedSendFinished(void);
 void lorawan_conf_finished(bool result);
 void GPS_CheckTrigger(void);
 bool sendLoRaFrame(void);
+void LoRa_RejoinHandler(void);
 
 // LoRa params
 bool doOTAA = true;   // Over the air activation
@@ -43,7 +45,7 @@ lmh_confirm LoRa_CurrentConfirm = LMH_UNCONFIRMED_MSG;				  // confirm/unconfirm
 uint8_t LoRa_AppPort = LORAWAN_APP_PORT;							        // data port
 static lmh_param_t LoRa_ParamInit = {LORAWAN_ADR_ON, LORAWAN_DATERATE, LORAWAN_PUBLIC_NETWORK, JOINREQ_NBTRIALS, LORAWAN_TX_POWER, LORAWAN_DUTYCYCLE_OFF};
 static lmh_callback_t LoRa_Callbacks = {BoardGetBatteryLevel, BoardGetUniqueId, BoardGetRandomSeed,
-                                          LoRa_rxHandler, LoRa_onJoinedHandler,
+                                          LoRa_rxHandler, LoRa_onHandlerJoined,
                                           LoRa_onConfirmClassHandler, LoRa_onFailedHandlerJoin,
                                           LoRa_onUncomfirmedSendFinished, lorawan_conf_finished
                                          };
@@ -51,6 +53,7 @@ static lmh_callback_t LoRa_Callbacks = {BoardGetBatteryLevel, BoardGetUniqueId, 
 // LoRa Structs
 #define LORAWAN_APP_DATA_BUFF_SIZE 64                     // buffer size of the data to be transmitted. */
 #define LORAWAN_APP_INTERVAL 30000
+#define LORAWAN_APP_REJOIN 60000
 static uint8_t m_lora_app_data_buffer[LORAWAN_APP_DATA_BUFF_SIZE];            //< Lora user application data buffer.
 static lmh_app_data_t m_lora_app_data = {m_lora_app_data_buffer, 0, 0, 0, 0}; //< Lora user application data structure.
 
@@ -133,6 +136,11 @@ void setup() {
   lmh_join();
   Serial.println("[SUP][LoRa] Initialization finished");
 
+  Serial.print("[SUP][EUI] Serial: ");
+  for(int i = 0; i < 8; i++){
+    Serial.print(nodeDeviceEUI[i], 16);
+  }
+  Serial.println();
   Serial.println("[SUP] ***** Setup completed! *****");
 
 }
@@ -142,7 +150,7 @@ bool processGPSData(void);
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (aliveCounter++ % 100000 == 0)
+  if (aliveCounter++ % 1000000 == 0)
   {
     Serial.print("[Loop] ");
     Serial.print(aliveCounter / 100000);
@@ -150,8 +158,15 @@ void loop() {
   }
 
   if (doSend){
+    Serial.println("[Loop][GPS] Attempting GPS read");
     bool result = processGPSData();
     doSend = false;
+  }
+
+  if (rejoin){
+    Serial.println("[Loop][LoRa] Attempting rejoin");
+    lmh_join();
+    rejoin = false;
   }
 }
 
@@ -292,17 +307,19 @@ bool sendLoRaFrame(void)
   }
 
   bool result;
-  Serial.print("[LoRa] Sending frame");
+  Serial.println("[LoRa] Sending frame");
 
   lmh_error_status error = lmh_send(&m_lora_app_data, LoRa_CurrentConfirm);
   if (error == LMH_SUCCESS)
   {
-    Serial.printf("[LoRa][SND] OK count %d\n", ++count);
+    Serial.print("[LoRa][SND] OK count ");
+    Serial.println(count);
     result = true;
   }
   else
   {
-    Serial.printf("[LoRa][SND] Fail count %d\n", ++countFail);
+    Serial.print("[LoRa][SND] Fail count");
+    Serial.println(count);
     result = false;
   }
 
@@ -313,7 +330,7 @@ bool sendLoRaFrame(void)
 //               LoRa Callbacks
 // **************************************************
 
-void LoRa_onJoinedHandler(void)
+void LoRa_onHandlerJoined(void)
 {
   if (doOTAA == true)
   {
@@ -338,6 +355,8 @@ static void LoRa_onFailedHandlerJoin(void)
   Serial.println("[LoRa] OTAA join failed!");
   Serial.println("[LoRa] Check your EUI's and Keys's!");
   Serial.println("[LoRa] Check if a Gateway is in range!");
+
+  appTimer.attach(LoRa_RejoinHandler, (std::chrono::microseconds)(LORAWAN_APP_REJOIN  * 1000)); // Re-add callback
 }
 
 void LoRa_rxHandler(lmh_app_data_t *app_data)
@@ -357,12 +376,12 @@ void LoRa_onConfirmClassHandler(DeviceClass_t Class)
 
 void LoRa_onUncomfirmedSendFinished(void)
 {
-  Serial.println("[TX] Finished");
+  Serial.println("[LoRa][TX] Finished");
 }
 
 void lorawan_conf_finished(bool result)
 {
-  Serial.printf("[TX] Confirmed %s\n", result ? "OK" : "NOK");
+  Serial.printf("[LoRa][TX] Confirmed %s\n", result ? "OK" : "NOK");
 }
 
 
@@ -377,4 +396,8 @@ void GPS_CheckTrigger(void){
 
   // Interrupt code
   doSend = true;
+}
+
+void LoRa_RejoinHandler(void){
+  rejoin = true;
 }
