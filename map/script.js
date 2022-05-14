@@ -9,6 +9,21 @@ else {
     console.log("Geolocation is not supported . . .");
 }
 
+var getJSON = function(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+};
+
 
 async function showPosition(position) {
     console.log("Latitude: " + position.coords.latitude +
@@ -32,18 +47,24 @@ function loadMap() {
     var markers = new Array;
 
     window.setInterval(function() {
-        coordinates = createRandomCoordinate()
-        var marker = L.marker([coordinates[0], coordinates[1]]).addTo(map);
-        if (markers.length >= 1) {
-            markers.shift().remove();
-        }
-        markers.push(marker);
+        getJSON('http://localhost:3000/trackers',
+        function(err, data) {
+            if (err !== null) {
+                alert('Something went wrong: ' + err);
+            } 
+            else {
+                console.log(data[0].latitude, data[0].longitude);
+                var marker = L.marker([data[0].latitude, data[0].longitude]).addTo(map);
+                if (markers.length >= 1) {
+                    markers.shift().remove();
+                }
+                markers.push(marker);
+            }
+        });
       }, 5000);
     
 }
 
-function createRandomCoordinate() {
-    let x = lat + Math.random() * (Math.round(Math.random()) ? 1 : -1) * 0.001;
-    let y = long + Math.random() * (Math.round(Math.random()) ? 1 : -1) * 0.001;
-    return [x, y]
-}
+
+
+
