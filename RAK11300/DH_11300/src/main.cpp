@@ -10,7 +10,7 @@
 #include <TinyGPS.h>
 #define GPS
 
-#define GPS_HARDCODE
+// #define GPS_HARDCODE
 
 using namespace std::chrono_literals;
 using namespace std::chrono;
@@ -34,8 +34,6 @@ void LoRa_RejoinHandler(void);
 
 // LoRa params
 bool doOTAA = true;   // Over the air activation
-#define SCHED_MAX_EVENT_DATA_SIZE APP_TIMER_SCHED_EVENT_DATA_SIZE //*< Maximum size of scheduler events. 
-#define SCHED_QUEUE_SIZE 60										  // Maximum number of events in the scheduler queue. 
 #define LORAWAN_DATERATE DR_0									  // LoRaMac datarates definition, from DR_0 to DR_5
 #define LORAWAN_TX_POWER TX_POWER_5							// LoRaMac tx power definition, from TX_POWER_0 to TX_POWER_15
 #define JOINREQ_NBTRIALS 3										  // Number of trials for the join request. 
@@ -148,6 +146,14 @@ void setup() {
 int aliveCounter = 0;
 bool processGPSData(void);
 
+int intToBuff(uint8_t* buffer, int index, int32_t input){
+    buffer[index++] = (input & 0xFF000000) >> 24;
+    buffer[index++] = (input & 0x00FF0000) >> 16;
+    buffer[index++] = (input & 0x0000FF00) >> 8;
+    buffer[index++] =  input & 0x000000FF;
+    return index;
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   if (aliveCounter++ % 1000000 == 0)
@@ -176,7 +182,7 @@ bool processGPSData(){
 
   #ifdef GPS
     Serial.println("[GPS] Starting GPS read");
-    bool newData = false;
+    bool newData = true; // TODO false
     #ifdef GPS_HARDCODE
     newData = true;
     #endif
@@ -211,32 +217,38 @@ bool processGPSData(){
 
       if (newData){
         Serial.println("[GPS] Parsing position");
-        float flat, flon, falt;
-        int32_t ilat, ilon, ialt;
+        float flat, flon, falt, fhdop;
+        int32_t ilat, ilon, ialt, ihdop;
         unsigned long age;
 
         #ifdef GPS_HARDCODE
         flat = 46.0497496;
         flon = 14.4690692;
         falt = 123.45;
+        fhdop = 2.5;
         #else
         gps.f_get_position(&flat, &flon, &age);
         falt = gps.f_altitude();
+        fhdop = gps.hdop();
         #endif
         bool coordinatesOK = true;
 
         coordinatesOK &= flat != TinyGPS::GPS_INVALID_ANGLE;
         coordinatesOK &= flon != TinyGPS::GPS_INVALID_ANGLE;
         coordinatesOK &= falt != TinyGPS::GPS_INVALID_ALTITUDE;
+        coordinatesOK &= fhdop != TinyGPS::GPS_INVALID_HDOP;
         
         ilat = flat * 100000;
         ilon = flon * 100000; 
         ialt = falt * 100;
+        ihdop = fhdop * 100;
 
         Serial.print("[GPS] lat: ");
         Serial.print(ilat);
         Serial.print(", lon: ");
         Serial.print(ilon);
+        Serial.print(", hdop: ");
+        Serial.print(ihdop);
         Serial.print(", ialt: ");
         Serial.println(ialt);
 
@@ -248,10 +260,8 @@ bool processGPSData(){
         m_lora_app_data.buffer[buffLen++] = coordinatesOK? 255 : 0; // Coordinates OK prefix
 
         //latitude
-        m_lora_app_data.buffer[buffLen++] = (ilat & 0xFF000000) >> 24;
-        m_lora_app_data.buffer[buffLen++] = (ilat & 0x00FF0000) >> 16;
-        m_lora_app_data.buffer[buffLen++] = (ilat & 0x0000FF00) >> 8;
-        m_lora_app_data.buffer[buffLen++] =  ilat & 0x000000FF;
+        buffLen = intToBuff(m_lora_app_data.buffer, buffLen, ilat);
+
         if (lineGPGGA.indexOf("S") != -1){
           m_lora_app_data.buffer[buffLen++] = 'S';
         }else{
@@ -259,23 +269,21 @@ bool processGPSData(){
         }
 
         // longitude
-        m_lora_app_data.buffer[buffLen++] = (ilon & 0xFF000000) >> 24;
-        m_lora_app_data.buffer[buffLen++] = (ilon & 0x00FF0000) >> 16;
-        m_lora_app_data.buffer[buffLen++] = (ilon & 0x0000FF00) >> 8;
-        m_lora_app_data.buffer[buffLen++] =  ilon & 0x000000FF;
+        buffLen = intToBuff(m_lora_app_data.buffer, buffLen, ilon);
 
         if (lineGPGGA.indexOf("E") != 0){
           m_lora_app_data.buffer[buffLen++] = 'E';
         }else{
           m_lora_app_data.buffer[buffLen++] = 'W';
         }
+        //alt
+        buffLen = intToBuff(m_lora_app_data.buffer, buffLen, ialt);
+        //hdop
+        buffLen = intToBuff(m_lora_app_data.buffer, buffLen, ihdop);
 
-        m_lora_app_data.buffer[buffLen++] = (ialt & 0xFF000000) >> 24;
-        m_lora_app_data.buffer[buffLen++] = (ialt & 0x00FF0000) >> 16;
-        m_lora_app_data.buffer[buffLen++] = (ialt & 0x0000FF00) >> 8;
-        m_lora_app_data.buffer[buffLen++] =  ialt & 0x000000FF;
-
-        Serial.println("[GPS] Written data to buffer");
+        Serial.print("[GPS] Written ");
+        Serial.print(buffLen);
+        Serial.println("B to buffer");
         m_lora_app_data.buffsize = buffLen;
         Serial.println("[GPS] Writing data");
         result = sendLoRaFrame();
@@ -299,27 +307,30 @@ int countFail = 0;
 
 bool sendLoRaFrame(void)
 {
+  Serial.print("[LoRa][SND] Join status: ");
+  Serial.println(byte(lmh_join_status_get()));
+  
   if (lmh_join_status_get() != LMH_SET)
   {
     //Not joined, try again later
-    Serial.println("[LoRa] Not joined");
+    Serial.println("[LoRa][SND] Not joined");
     return false;
   }
 
   bool result;
-  Serial.println("[LoRa] Sending frame");
+  Serial.println("[LoRa][SND] Sending frame");
 
   lmh_error_status error = lmh_send(&m_lora_app_data, LoRa_CurrentConfirm);
   if (error == LMH_SUCCESS)
   {
     Serial.print("[LoRa][SND] OK count ");
-    Serial.println(count);
+    Serial.println(count++);
     result = true;
   }
   else
   {
     Serial.print("[LoRa][SND] Fail count");
-    Serial.println(count);
+    Serial.println(countFail++);
     result = false;
   }
 
