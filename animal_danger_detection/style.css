@@ -1,16 +1,18 @@
-body{
-    background-image: url('/DragonHack2022/animal_danger_detection/images/bakcground_map.jpg');
+body {
+	background-image: url('./images/background_map.jpg');
+	background-repeat: no-repeat;
+	background-size: cover;
 }
 
-p{
-    text-align: center;
-    font-size: 30px;           
-    font-weight: bolder;
+p {
+	text-align: center;
+	font-size: 30px;
+	font-weight: bolder;
 }
 
-canvas{
-    position: absolute;
-    top: 55%;
-    left: 50%;
-    transform: translate(-50%, -50%);             
+canvas {
+	position: absolute;
+	top: 55%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
