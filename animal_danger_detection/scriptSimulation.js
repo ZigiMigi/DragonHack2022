@@ -8,13 +8,16 @@ var ctx = canvas.getContext("2d");
 
 // load backgroud
 let bgImg = new Image();
-bgImg.src = './road2.jpg';
+bgImg.src = './images/background_road_map.jpg';
 ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
+
+// road detecting made with pixel findings (terible way...)
 function circleOnRoad(width, height){
     // square around
     for (let i = width - 15; i < width + 15; i++) {
         for (let j = height - 15;j < height + 15; j++) {
+            // every pixel inside the circle radius
             if (Math.sqrt((i - width) * (i - width) + (j - height) * (j - height)) < 15) {
                 let tmp = ctx.getImageData(i, j, 1, 1).data;
                     if (tmp[0] == 255 && tmp[1] == 255 && tmp[2] == 255) {
@@ -26,6 +29,7 @@ function circleOnRoad(width, height){
     return false;
 }
 
+
 // mouse move
 function mousemove(event){
     ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
@@ -36,6 +40,7 @@ function mousemove(event){
 
     ctx.fillStyle = "black";
 
+    // if collision turn color to red and fill circle
     if (circleOnRoad(x, y)) {
         ctx.fillStyle = "red";
     }
