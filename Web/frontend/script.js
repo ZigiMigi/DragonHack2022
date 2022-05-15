@@ -55,7 +55,7 @@ function pantotracker(device_id) {
 	map.flyTo(chosen_marker.getLatLng(), 17);
 }
 
-pantotracker();
+// pantotracker();
 
 function loadMap() {
 	// load map and set it to current location
@@ -66,12 +66,12 @@ function loadMap() {
 	}).addTo(map);
 
 	// create a marker for FRI
-	var markerFri = L.marker([46.05076627820738, 14.469006330685156], {
-		riseOnHover: true
-	}).addTo(map);
-	markerFri
-		.bindPopup('Fakulteta za računalništvo in informatiko')
-		.openPopup();
+	// var markerFri = L.marker([46.05076627820738, 14.469006330685156], {
+	// 	riseOnHover: true
+	// }).addTo(map);
+	// markerFri
+	// 	.bindPopup('Fakulteta za računalništvo in informatiko')
+	// 	.openPopup();
 
 	window.setInterval(function () {
 		getJSON('http://localhost:3000/trackers', function (err, data) {
@@ -79,11 +79,12 @@ function loadMap() {
 			if (err !== null) {
 				alert('Something went wrong: ' + err);
 			} else {
+				let open_popup_id;
 				if (markers.length >= 1) {
 					for (let i = 0; i < data.length; i++) {
-						// if(markers[i].isPopupOpen()) {
-						// 	markers[i].getPopup().getContent();
-						// }
+						if (markers[0].isPopupOpen()) {
+							open_popup_id = markers[0].getPopup().getContent();
+						}
 						markers.shift().remove();
 					}
 				}
@@ -102,6 +103,12 @@ function loadMap() {
 					).addTo(map);
 					marker.bindPopup(data[i].device_id);
 					markers.push(marker);
+					if (
+						data[i].device_id !== undefined &&
+						data[i].device_id === open_popup_id
+					) {
+						marker.openPopup();
+					}
 
 					trackerDiv +=
 						'<div class="tracker" onclick="pantotracker(&quot;' +
