@@ -8,7 +8,7 @@ var ctx = canvas.getContext("2d");
 
 // load backgroud
 let bgImg = new Image();
-bgImg.src = './road.jpg';
+bgImg.src = './road2.jpg';
 ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
 function circleOnRoad(width, height){
@@ -17,8 +17,7 @@ function circleOnRoad(width, height){
         for (let j = height - 15;j < height + 15; j++) {
             if (Math.sqrt((i - width) * (i - width) + (j - height) * (j - height)) < 15) {
                 let tmp = ctx.getImageData(i, j, 1, 1).data;
-                    if (tmp[0] == 0 && tmp[1] == 0 && tmp[2] == 0) {
-                        console.log("COLLISION!!!")
+                    if (tmp[0] == 255 && tmp[1] == 255 && tmp[2] == 255) {
                         return true;
                     }
             }
