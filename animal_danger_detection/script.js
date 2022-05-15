@@ -117,6 +117,8 @@ function mousemove(event){
     if (hit1) {
         ctx.fillStyle = "red";
         console.log("Animal is in danger zone ! ! !");
+        ctx.font = "30px Arial";
+        ctx.fillText("Animal is in danger zone ! ! !", 10, 30);
     }
     
     ctx.beginPath();
