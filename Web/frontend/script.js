@@ -35,15 +35,31 @@ async function showPosition(position) {
 	loadMap();
 }
 
-function pantotracker() {
-	console.log('hello');
+var markers = new Array();
+var map;
+
+function pantotracker(device_id) {
+	let chosen_marker = markers.find((x) => {
+		return x.getPopup().getContent() === device_id;
+	});
+
+	// clear all popups except chosen one
+	markers.forEach((x) => {
+		if (x.getPopup().getContent() !== chosen_marker) {
+			x.closePopup();
+		}
+	});
+
+	chosen_marker.openPopup();
+
+	map.flyTo(chosen_marker.getLatLng(), 17);
 }
 
 pantotracker();
 
 function loadMap() {
 	// load map and set it to current location
-	var map = L.map('map').setView([lat, long], 15);
+	map = L.map('map').setView([lat, long], 15);
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		attribution:
 			'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -57,8 +73,6 @@ function loadMap() {
 		.bindPopup('Fakulteta za računalništvo in informatiko')
 		.openPopup();
 
-	var markers = new Array();
-
 	window.setInterval(function () {
 		getJSON('http://localhost:3000/trackers', function (err, data) {
 			let trackerDiv = '';
@@ -67,6 +81,9 @@ function loadMap() {
 			} else {
 				if (markers.length >= 1) {
 					for (let i = 0; i < data.length; i++) {
+						// if(markers[i].isPopupOpen()) {
+						// 	markers[i].getPopup().getContent();
+						// }
 						markers.shift().remove();
 					}
 				}
@@ -86,12 +103,14 @@ function loadMap() {
 					markers.push(marker);
 
 					trackerDiv +=
-						'<div class="tracker" onclick="pantotracker()"><p>' +
+						'<div class="tracker" onclick="pantotracker(&quot;' +
 						data[i].device_id +
-						'</p></div>';
+						'&quot;)"><p id="tracker-header" class="disable-select">' +
+						data[i].device_id +
+						'</p><p class="disable-select">latitude: 140</br>longitude: 14.5</br>altitude: 300</p></div>';
 				}
 
-				document.getElementById('toolbar').innerHTML = trackerDiv;
+				document.getElementById('toolbar-items').innerHTML = trackerDiv;
 			}
 		});
 	}, 5000);
