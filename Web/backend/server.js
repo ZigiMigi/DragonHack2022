@@ -47,7 +47,8 @@ app.get('/trackers', (req, res) => {
 					return {
 						device_id: x.ids.device_id,
 						latitude: x.locations['frm-payload'].latitude,
-						longitude: x.locations['frm-payload'].longitude
+						longitude: x.locations['frm-payload'].longitude,
+						altitude: x.locations['frm-payload'].altitude
 					};
 				});
 				res.json(locs);
