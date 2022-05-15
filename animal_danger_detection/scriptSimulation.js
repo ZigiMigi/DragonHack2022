@@ -11,7 +11,6 @@ let bgImg = new Image();
 bgImg.src = './images/background_road_map.jpg';
 ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-
 // road detecting made with pixel findings (terible way...)
 function circleOnRoad(width, height){
     // square around
@@ -43,6 +42,8 @@ function mousemove(event){
     // if collision turn color to red and fill circle
     if (circleOnRoad(x, y)) {
         ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("Animal is in danger zone ! ! !", 10, 30);
     }
     
     ctx.beginPath();
