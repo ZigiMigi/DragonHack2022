@@ -7,7 +7,7 @@
 
 #include <TinyGPS.h>
 #define GPS
-// #define GPS_HARDCODE
+#define GPS_HARDCODE
 
 using namespace std::chrono_literals;
 using namespace std::chrono;
@@ -233,10 +233,13 @@ bool processGPSData(){
         unsigned long age;
 
         #ifdef GPS_HARDCODE
-        flat = 46.0497496;
-        flon = 14.4690692;
-        falt = 123.45;
-        fhdop = 2.5;
+        // flat = 46.0497496;
+        // flon = 14.4690692;
+        // falt = 301.4;
+        flat = 46.048653;
+        flon = 14.467621;
+        falt = 299.53;
+        fhdop = 264.08;
         #else
         gps.f_get_position(&flat, &flon, &age);
         falt = gps.f_altitude();
