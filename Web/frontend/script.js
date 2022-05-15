@@ -91,7 +91,8 @@ function loadMap() {
 					console.log(
 						data[i].longitude,
 						data[i].latitude,
-						data[i].device_id
+						data[i].device_id,
+						data[i].altitude
 					);
 					var marker = L.marker(
 						[data[i].latitude, data[i].longitude],
@@ -107,7 +108,13 @@ function loadMap() {
 						data[i].device_id +
 						'&quot;)"><p id="tracker-header" class="disable-select">' +
 						data[i].device_id +
-						'</p><p class="disable-select">latitude: 140</br>longitude: 14.5</br>altitude: 300</p></div>';
+						'</p><p class="disable-select">latitude: ' +
+						data[i].longitude +
+						'</br>longitude: ' +
+						data[i].latitude +
+						'</br>altitude: ' +
+						data[i].altitude +
+						'</p></div>';
 				}
 
 				document.getElementById('toolbar-items').innerHTML = trackerDiv;
