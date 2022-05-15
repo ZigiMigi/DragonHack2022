@@ -1,15 +1,12 @@
 #include <Arduino.h>
 #include "LoRaWan-Arduino.h" //http://librarymanager/All#SX126x
 #include <SPI.h>
-
 #include <stdio.h>
-
 #include "mbed.h"
 #include "rtos.h"
 
 #include <TinyGPS.h>
 #define GPS
-
 // #define GPS_HARDCODE
 
 using namespace std::chrono_literals;
@@ -22,24 +19,24 @@ bool doSend = false;
 bool rejoin = false;
 
 // Forward Callback declerations
-static void LoRa_onHandlerJoined(void);
-static void LoRa_onFailedHandlerJoin(void);
-static void LoRa_rxHandler(lmh_app_data_t *app_data);
-static void LoRa_onConfirmClassHandler(DeviceClass_t Class);
-void LoRa_onUncomfirmedSendFinished(void);
-void lorawan_conf_finished(bool result);
-void GPS_CheckTrigger(void);
-bool sendLoRaFrame(void);
-void LoRa_RejoinHandler(void);
+void GPS_CheckTrigger               (void);
+bool sendLoRaFrame                  (void);
+void LoRa_onHandlerJoined           (void);
+void LoRa_onFailedHandlerJoin       (void);
+void LoRa_onUncomfirmedSendFinished (void);
+void LoRa_RejoinHandler             (void);
+void LoRa_rxHandler                 (lmh_app_data_t *app_data);
+void LoRa_onConfirmClassHandler     (DeviceClass_t Class);
+void lorawan_conf_finished          (bool result);
 
 // LoRa params
-bool doOTAA = true;   // Over the air activation
-#define LORAWAN_DATERATE DR_0									  // LoRaMac datarates definition, from DR_0 to DR_5
-#define LORAWAN_TX_POWER TX_POWER_5							// LoRaMac tx power definition, from TX_POWER_0 to TX_POWER_15
-#define JOINREQ_NBTRIALS 3										  // Number of trials for the join request. 
-DeviceClass_t LoRa_CurrentClass = CLASS_A;					// class definition
-LoRaMacRegion_t LoRa_CurrentRegion = LORAMAC_REGION_EU868;    // Region:EU868
-lmh_confirm LoRa_CurrentConfirm = LMH_UNCONFIRMED_MSG;				  // confirm/unconfirm packet definition
+bool doOTAA = true;                                           // Over the air activation
+#define LORAWAN_DATERATE DR_0									                // LoRaMac datarates definition, from DR_0 to DR_5
+#define LORAWAN_TX_POWER TX_POWER_5							              // LoRaMac tx power definition, from TX_POWER_0 to TX_POWER_15
+#define JOINREQ_NBTRIALS 3										                // Number oftrials for the join request. 
+DeviceClass_t LoRa_CurrentClass = CLASS_A;					          // class definition
+LoRaMacRegion_t LoRa_CurrentRegion = LORAMAC_REGION_EU868;
+lmh_confirm LoRa_CurrentConfirm = LMH_UNCONFIRMED_MSG;				// confirm/unconfirm packet definition
 uint8_t LoRa_AppPort = LORAWAN_APP_PORT;							        // data port
 static lmh_param_t LoRa_ParamInit = {LORAWAN_ADR_ON, LORAWAN_DATERATE, LORAWAN_PUBLIC_NETWORK, JOINREQ_NBTRIALS, LORAWAN_TX_POWER, LORAWAN_DUTYCYCLE_OFF};
 static lmh_callback_t LoRa_Callbacks = {BoardGetBatteryLevel, BoardGetUniqueId, BoardGetRandomSeed,
@@ -58,7 +55,7 @@ static lmh_app_data_t m_lora_app_data = {m_lora_app_data_buffer, 0, 0, 0, 0}; //
 // ************************************ IDs ************************************
 // #define D7 // Peter
 #include "keys.h"
-// ************************************     ************************************
+// *****************************************************************************
 
 
 void setup() {
@@ -98,7 +95,14 @@ void setup() {
 
   Serial.println("[SUP][GPS] Starting uart ...");
   Serial1.begin(9600);
-  while (!Serial1);
+  while (!Serial1){
+    if ((millis() - timeout) < 10000){
+      delay(100);
+    }else{
+      Serial.println("[SUP][GPS] UART init FAIL");
+      break;
+    }
+  }
   Serial.println("[SUP][GPS] UART init OK");
   #else
   Serial.println("[SUP][GPS] Initialization skipped");
@@ -163,18 +167,21 @@ void loop() {
     Serial.println(" Alive");
   }
 
+  // Send data if requested
   if (doSend){
     Serial.println("[Loop][GPS] Attempting GPS read");
     bool result = processGPSData();
     doSend = false;
   }
 
+  // Try rejoining 
   if (rejoin){
     Serial.println("[Loop][LoRa] Attempting rejoin");
     lmh_join();
     rejoin = false;
   }
 
+  // Alive status
   aliveCounter ++;
   digitalWrite(LED_BUILTIN, aliveCounter % 2);
   sleep_ms(250);
@@ -272,7 +279,7 @@ bool processGPSData(){
           m_lora_app_data.buffer[buffLen++] = 'N';
         }
 
-        // longitude
+        //longitude
         buffLen = intToBuff(m_lora_app_data.buffer, buffLen, ilon);
 
         if (lineGPGGA.indexOf("E") != 0){
@@ -324,6 +331,7 @@ bool sendLoRaFrame(void)
   bool result;
   Serial.println("[LoRa][SND] Sending frame");
 
+  //Send data
   lmh_error_status error = lmh_send(&m_lora_app_data, LoRa_CurrentConfirm);
   if (error == LMH_SUCCESS)
   {
@@ -360,12 +368,11 @@ void LoRa_onHandlerJoined(void)
   if (ret == LMH_SUCCESS)
   {
     delay(1000);
-    // Start the application timer. Time has to be in microseconds
     appTimer.attach(GPS_CheckTrigger, (std::chrono::microseconds)(LORAWAN_APP_INTERVAL * 1000));
   }
 }
 
-static void LoRa_onFailedHandlerJoin(void)
+void LoRa_onFailedHandlerJoin(void)
 {
   Serial.println("[LoRa] OTAA join failed!");
   Serial.println("[LoRa] Check your EUI's and Keys's!");
@@ -383,7 +390,7 @@ void LoRa_rxHandler(lmh_app_data_t *app_data)
 void LoRa_onConfirmClassHandler(DeviceClass_t Class)
 {
   Serial.printf("[LoRa] Witch to class %c done\n", "ABC"[Class]);
-  // Informs the server that switch has occurred ASAP
+  // Informs the server that switch has occurred
   m_lora_app_data.buffsize = 0;
   m_lora_app_data.port = LoRa_AppPort;
   lmh_send(&m_lora_app_data, LoRa_CurrentConfirm);
